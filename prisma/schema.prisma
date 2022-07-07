@@ -1,0 +1,104 @@
+//datasource db {
+//  provider = "postgresql"
+//  url      = env("DATABASE_URL")
+//}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_DEV")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator nestgraphql {
+  provider              = "node node_modules/prisma-nestjs-graphql"
+  output                = "../src/@generated"
+  reExport              = Directories
+  fields_Scalars_from   = "graphql-scalars"
+  fields_Scalars_input  = true
+  fields_Scalars_output = true
+  fields_TF_from        = "type-fest"
+  fields_TF_input       = true
+  fields_TF_output      = true
+}
+
+model AuditLogEntry {
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLUUID")
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLDateTime")
+  createdAt DateTime @default(now())
+  /// @FieldType("Scalars.GraphQLJSON")
+  /// @PropertyType("TF.JsonObject")
+  content   Json
+}
+
+model User {
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLUUID")
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLDateTime")
+  joinedAt       DateTime     @default(now())
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLDateTime")
+  lastLoggedInAt DateTime     @default(now())
+  username       String       @unique @db.Citext
+  /// @FieldType("Scalars.GraphQLEmailAddress")
+  email          String       @unique @db.Citext
+  /// @HideField({input: true, output: true})
+  passwordHash   String
+  profile        UserProfile?
+  realms         Realm[]
+  lores          Lore[]
+}
+
+model UserProfile {
+  user        User    @relation(fields: [userId], references: [id])
+  /// @FieldType("Scalars.GraphQLUUID")
+  userId      String  @id @unique @db.Uuid
+  displayName String? @db.Citext
+  bio         String?
+  pronouns    String?
+}
+
+model Realm {
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLUUID")
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLDateTime")
+  createdAt DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id])
+  /// @FieldType("Scalars.GraphQLUUID")
+  authorId  String   @db.Uuid
+  title     String   @default("Untitled Realm") @db.Citext
+  lores     Lore[]
+
+  @@unique([authorId, title])
+}
+
+model Lore {
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLUUID")
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLDateTime")
+  createdAt DateTime @default(now())
+  /// @HideField({input: true})
+  /// @FieldType("Scalars.GraphQLDateTime")
+  updatedAt DateTime @default(now()) @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+  /// @FieldType("Scalars.GraphQLUUID")
+  authorId  String   @db.Uuid
+  realm     Realm    @relation(fields: [realmId], references: [id])
+  /// @FieldType("Scalars.GraphQLUUID")
+  realmId   String   @db.Uuid
+  title     String   @default("Untitled Lore") @db.Citext
+  contents  String   @default("")
+
+  @@unique([authorId, realmId, title])
+}
